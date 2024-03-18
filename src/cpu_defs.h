@@ -20,4 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "psycho/ctx.h"
+/// @file cpu_defs.h Defines CPU related constants and functions that are useful
+/// to both the disassembler and CPU implementations.
+
+#pragma once

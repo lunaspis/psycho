@@ -20,4 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "psycho/ctx.h"
+/// @file types.h Wraps some fixed-width and built-in integer types into shorter
+/// but clearer forms which are faster to type.
+
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+#include <stdint.h>
+
+typedef unsigned int uint;
+typedef uint64_t u64;
+typedef int64_t s64;
+typedef uint32_t u32;
+typedef int32_t s32;
+typedef uint16_t u16;
+typedef int16_t s16;
+typedef uint8_t u8;
+typedef int8_t s8;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus

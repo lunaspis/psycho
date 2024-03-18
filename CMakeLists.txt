@@ -140,6 +140,10 @@ set(COMPILER_FLAGS_BASE_GCC
 	-Wunsafe-loop-optimizations
 	-Wunsuffixed-float-constants)
 
+if (PSYCHO_ENABLE_SANITIZERS)
+	list(APPEND COMPILER_FLAGS_BASE -fsanitize=address,undefined)
+endif()
+
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	list(APPEND COMPILER_FLAGS_BASE "-ggdb3")
 	list(APPEND COMPILER_FLAGS_BASE ${COMPILER_FLAGS_BASE_GCC})

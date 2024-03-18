@@ -20,4 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "psycho/ctx.h"
+/// @file ctx.h Provides the public interface for the psycho context.
+
+#pragma once
+
+#include "dbg_disasm.h"
+
+/// @brief Defines the emulator context.
+struct psycho_ctx {
+	struct psycho_dbg_disasm disasm;
+};

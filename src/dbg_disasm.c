@@ -20,4 +20,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "psycho/ctx.h"
+#include "psycho/dbg_disasm.h"
+
+void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
+		       const u32 pc)
+{
+}
+
+void psycho_dbg_disasm_trace(struct psycho_ctx *const ctx)
+{
+}
