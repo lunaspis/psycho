@@ -90,9 +90,7 @@ add_library(psycho_build_config_base INTERFACE)
 # Be sure to verify that this assertion holds when updating the minimum compiler
 # versions, as we have no way to automate that process.
 set(COMPILER_FLAGS_BASE
-	-Waggressive-loop-optimizations
 	-Wall
-	-Walloc-zero
 	-Walloca
 	-Wbad-function-cast
 	-Wcast-align
@@ -100,17 +98,12 @@ set(COMPILER_FLAGS_BASE
 	-Wconversion
 	-Wdisabled-optimization
 	-Wdouble-promotion
-	-Wduplicated-branches
-	-Wduplicated-cond
 	-Wextra
 	-Wfloat-equal
-	-Wformat-signedness
 	-Wformat=2
 	-Winit-self
 	-Winline
 	-Winvalid-pch
-	-Wjump-misses-init
-	-Wlogical-op
 	-Wmissing-declarations
 	-Wmissing-format-attribute
 	-Wmissing-include-dirs
@@ -124,21 +117,32 @@ set(COMPILER_FLAGS_BASE
 	-Wredundant-decls
 	-Wshadow
 	-Wstrict-prototypes
+	-Wswitch-default
+	-Wswitch-enum
+	-Wundef
+	-Wvla
+	-Wwrite-strings)
+
+# These flags will apply if and only if gcc is the compiler.
+set(COMPILER_FLAGS_BASE_GCC
+	-Waggressive-loop-optimizations
+	-Walloc-zero
+	-Wduplicated-branches
+	-Wduplicated-cond
+	-Wformat-signedness
+	-Wjump-misses-init
+	-Wlogical-op
 	-Wstringop-truncation
 	-Wsuggest-attribute=cold
 	-Wsuggest-attribute=const
 	-Wsuggest-attribute=malloc
 	-Wsuggest-attribute=pure
-	-Wswitch-default
-	-Wswitch-enum
-	-Wundef
 	-Wunsafe-loop-optimizations
-	-Wunsuffixed-float-constants
-	-Wvla
-	-Wwrite-strings)
+	-Wunsuffixed-float-constants)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	list(APPEND COMPILER_FLAGS_BASE "-ggdb3")
+	list(APPEND COMPILER_FLAGS_BASE ${COMPILER_FLAGS_BASE_GCC})
 elseif (CMAKE_C_COMPILER_ID MATCHES "Clang")
 	list(APPEND COMPILER_FLAGS_BASE "-glldb")
 endif()
