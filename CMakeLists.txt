@@ -155,7 +155,13 @@ target_compile_options(
 )
 
 add_library(psycho_build_config_c INTERFACE)
-target_compile_features(psycho_build_config_c INTERFACE c_std_17)
+
+if (CMAKE_VERSION LESS "3.21.7")
+	target_compile_features(psycho_build_config_c INTERFACE c_std_11)
+else()
+	target_compile_features(psycho_build_config_c INTERFACE c_std_17)
+endif()
+
 target_link_libraries(psycho_build_config_c INTERFACE psycho_build_config_base)
 
 add_subdirectory(src)
