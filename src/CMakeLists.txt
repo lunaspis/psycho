@@ -22,11 +22,12 @@
 
 set(SRCS ctx.c dbg_disasm.c)
 
-set(HDRS_PUBLIC ${PROJECT_SOURCE_DIR}/include/psycho/ctx.h
+set(HDRS_PUBLIC ${PROJECT_SOURCE_DIR}/include/psycho/cpu_defs.h
+		${PROJECT_SOURCE_DIR}/include/psycho/ctx.h
 		${PROJECT_SOURCE_DIR}/include/psycho/dbg_disasm.h
 		${PROJECT_SOURCE_DIR}/include/psycho/types.h)
 
-set(HDRS_PRIVATE cpu_defs.h)
+set(HDRS_PRIVATE compiler.h cpu_defs.h)
 
 # We only support building static libraries for now.
 add_library(psycho STATIC ${SRCS} ${HDRS_PUBLIC} ${HDRS_PRIVATE})
