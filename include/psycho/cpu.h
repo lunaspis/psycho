@@ -20,25 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <string.h>
-#include "cpu.h"
+/// @file cpu.h Provides public information about the CPU interpreter.
 
-#include "psycho/ctx.h"
+#pragma once
 
-struct psycho_ctx psycho_ctx_create(void)
-{
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+#include "cpu_defs.h"
+#include "types.h"
 
-	return ctx;
-}
-
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
-
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
-}
+struct psycho_cpu {
+	u32 gpr[PSYCHO_CPU_GPR_REGS_NUM];
+	u32 instr;
+	u32 pc;
+};

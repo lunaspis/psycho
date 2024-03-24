@@ -21,24 +21,32 @@
 // SOFTWARE.
 
 #include <string.h>
+
 #include "cpu.h"
+#include "cpu_defs.h"
+#include "bus.h"
 
-#include "psycho/ctx.h"
+// clang-format off
 
-struct psycho_ctx psycho_ctx_create(void)
+#define PC 	(ctx->cpu.pc)
+#define GPR	(ctx->cpu.gpr)
+
+// clang-format on
+
+static ALWAYS_INLINE NODISCARD u32 instr_fetch(struct psycho_ctx *const ctx)
 {
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
-
-	return ctx;
+	const u32 paddr = cpu_vaddr_to_paddr(PC);
+	return bus_lw(ctx, paddr);
 }
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
+void cpu_reset(struct psycho_ctx *const ctx)
 {
-	cpu_reset(ctx);
+	memset(GPR, 0, sizeof(GPR));
+	PC = CPU_VEC_RST;
+
+	ctx->cpu.instr = instr_fetch(ctx);
 }
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
+void cpu_step(struct psycho_ctx *const ctx)
 {
-	cpu_step(ctx);
 }

@@ -24,9 +24,20 @@
 
 #pragma once
 
+#include "bus.h"
+#include "cpu.h"
 #include "dbg_disasm.h"
+#include "dbg_log.h"
 
 /// @brief Defines the emulator context.
 struct psycho_ctx {
 	struct psycho_dbg_disasm disasm;
+	struct psycho_bus bus;
+	struct psycho_cpu cpu;
+	struct psycho_dbg_log log;
 };
+
+struct psycho_ctx psycho_ctx_create(void);
+
+void psycho_ctx_reset(struct psycho_ctx *ctx);
+void psycho_ctx_step(struct psycho_ctx *ctx);

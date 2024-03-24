@@ -20,25 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <string.h>
-#include "cpu.h"
+#pragma once
 
-#include "psycho/ctx.h"
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-struct psycho_ctx psycho_ctx_create(void)
-{
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+#include "types.h"
 
-	return ctx;
+// clang-format off
+
+#define PSYCHO_DBG_LOG_LEVEL_INFO	(0)
+#define PSYCHO_DBG_LOG_LEVEL_WARN	(1)
+#define PSYCHO_DBG_LOG_LEVEL_ERR	(2)
+#define PSYCHO_DBG_LOG_LEVEL_DBG	(3)
+#define PSYCHO_DBG_LOG_LEVEL_TRACE	(4)
+
+// clang-format on
+
+struct psycho_dbg_log {
+	void *udata;
+	void (*cb)(void *udata, const uint level, char *str);
+	uint level;
+};
+
+#ifdef __cplusplus
 }
-
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
-
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
-}
+#endif // __cplusplus

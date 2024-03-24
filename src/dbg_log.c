@@ -20,25 +20,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#define LOG_MSG_MAX (512)
+
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
-#include "cpu.h"
+#include "compiler.h"
+#include "dbg_log.h"
 
-#include "psycho/ctx.h"
-
-struct psycho_ctx psycho_ctx_create(void)
+FORMAT_CHK(3, 4)
+void dbg_log_msg(const struct psycho_dbg_log *const log, const uint level,
+		 const char *const msg, ...)
 {
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+	// clang-format off
+	static const char *const level_txt[] = {
+		[PSYCHO_DBG_LOG_LEVEL_INFO]  = "[info]",
+		[PSYCHO_DBG_LOG_LEVEL_WARN]  = "[warn]",
+		[PSYCHO_DBG_LOG_LEVEL_ERR]   = "[error]",
+		[PSYCHO_DBG_LOG_LEVEL_DBG]   = "[debug]",
+		[PSYCHO_DBG_LOG_LEVEL_TRACE] = "[trace]"
+	};
+	// clang-format on
 
-	return ctx;
-}
+	char str[LOG_MSG_MAX];
+	uint pos = 0;
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
+	memcpy(str, level_txt[level], sizeof(*level_txt[level]));
+	pos += sizeof(level_txt[level]);
+	str[pos++] = ' ';
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
+	va_list args;
+	va_start(args, msg);
+	vsprintf(str, msg, args);
+	va_end(args);
+
+	log->cb(log->udata, level, str);
 }

@@ -20,25 +20,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <string.h>
-#include "cpu.h"
+#pragma once
 
-#include "psycho/ctx.h"
+#include "psycho/dbg_log.h"
 
-struct psycho_ctx psycho_ctx_create(void)
-{
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+void dbg_log_msg(const struct psycho_dbg_log *log, uint level, const char *msg,
+		 ...);
 
-	return ctx;
-}
+#define LOG_HANDLE(lvl, args...)                              \
+	({                                                    \
+		if ((ctx->log.level >= lvl) && ctx->log.cb) { \
+			dbg_log_msg(&ctx->log, lvl, args);    \
+		}                                             \
+	})
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
+// clang-format off
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
-}
+#define LOG_INFO(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_INFO, args))
+#define LOG_WARN(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_WARN, args))
+#define LOG_ERR(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_ERR, args))
+#define LOG_FATAL(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_FATAL, args))
+#define LOG_DBG(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_DBG, args))
+#define LOG_TRACE(args...)	(LOG_HANDLE(PSYCHO_DBG_LOG_LEVEL_TRACE, args))
+
+// clang-format on

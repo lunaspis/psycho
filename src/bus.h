@@ -20,25 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <string.h>
-#include "cpu.h"
+#pragma once
 
 #include "psycho/ctx.h"
 
-struct psycho_ctx psycho_ctx_create(void)
-{
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
-
-	return ctx;
-}
-
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
-
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
-}
+u32 bus_lw(struct psycho_ctx *ctx, u32 paddr);

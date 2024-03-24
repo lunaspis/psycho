@@ -20,14 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-set(SRCS ctx.c dbg_disasm.c)
+set(SRCS bus.c cpu.c ctx.c dbg_disasm.c dbg_log.c)
 
-set(HDRS_PUBLIC ${PROJECT_SOURCE_DIR}/include/psycho/cpu_defs.h
+set(HDRS_PUBLIC ${PROJECT_SOURCE_DIR}/include/psycho/bus.h
+		${PROJECT_SOURCE_DIR}/include/psycho/cpu.h
+		${PROJECT_SOURCE_DIR}/include/psycho/cpu_defs.h
 		${PROJECT_SOURCE_DIR}/include/psycho/ctx.h
 		${PROJECT_SOURCE_DIR}/include/psycho/dbg_disasm.h
+		${PROJECT_SOURCE_DIR}/include/psycho/dbg_log.h
 		${PROJECT_SOURCE_DIR}/include/psycho/types.h)
 
-set(HDRS_PRIVATE compiler.h cpu_defs.h)
+set(HDRS_PRIVATE bus.h compiler.h cpu.h cpu_defs.h dbg_log.h)
 
 # We only support building static libraries for now.
 add_library(psycho STATIC ${SRCS} ${HDRS_PUBLIC} ${HDRS_PRIVATE})

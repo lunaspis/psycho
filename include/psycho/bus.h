@@ -20,25 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <string.h>
-#include "cpu.h"
+#pragma once
 
-#include "psycho/ctx.h"
+#include "types.h"
 
-struct psycho_ctx psycho_ctx_create(void)
-{
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+// clang-format off
 
-	return ctx;
-}
+#define PSYCHO_BUS_BIOS_BEG	(0x1FC00000)
+#define PSYCHO_BUS_BIOS_END	(0x1FC7FFFF)
+#define PSYCHO_BUS_BIOS_SIZE	((PSYCHO_BUS_BIOS_END - PSYCHO_BUS_BIOS_BEG) - 1)
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
+// clang-format on
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
-}
+struct psycho_bus {
+	u8 bios[PSYCHO_BUS_BIOS_SIZE];
+};

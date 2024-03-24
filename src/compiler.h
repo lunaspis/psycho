@@ -31,3 +31,5 @@
 
 /// @brief The return value of this function should not be discarded.
 #define NODISCARD __attribute__((warn_unused_result))
+
+#define FORMAT_CHK(index, first) __attribute__((format(printf, index, first)))

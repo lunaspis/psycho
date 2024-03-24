@@ -21,24 +21,34 @@
 // SOFTWARE.
 
 #include <string.h>
-#include "cpu.h"
+#include "bus.h"
+#include "dbg_log.h"
 
-#include "psycho/ctx.h"
+// clang-format off
 
-struct psycho_ctx psycho_ctx_create(void)
+#define BIOS_BEG	(PSYCHO_BUS_BIOS_BEG)
+#define BIOS_END	(PSYCHO_BUS_BIOS_END)
+#define BIOS_MASK	(0x000FFFFF)
+
+// clang-format on
+
+u32 bus_lw(struct psycho_ctx *const ctx, const u32 paddr)
 {
-	struct psycho_ctx ctx;
-	memset(&ctx, 0, sizeof(ctx));
+	u32 word = 0xFFFFFFFF;
 
-	return ctx;
-}
+	switch (paddr) {
+	case BIOS_BEG ... BIOS_END:
+		memcpy(&word, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(u32));
+		break;
 
-void psycho_ctx_reset(struct psycho_ctx *const ctx)
-{
-	cpu_reset(ctx);
-}
+	default:
+		LOG_TRACE("Unknown physical address 0x%08X when attempting to "
+			  "load word; returning 0xFFFF'FFFF",
+			  word, paddr);
+		return word;
+	}
 
-void psycho_ctx_step(struct psycho_ctx *const ctx)
-{
-	cpu_step(ctx);
+	LOG_TRACE("Loaded word 0x%08X from physical address 0x%08X", word,
+		  paddr);
+	return word;
 }

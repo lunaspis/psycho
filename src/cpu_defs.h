@@ -239,6 +239,8 @@
 #define CPU_CP2_CCR_ZSF4	(30)
 #define CPU_CP2_CCR_FLAG	(31)
 
+#define CPU_VEC_RST		(0xBFC00000)
+
 // clang-format on
 
 /// @brief Retrieves the 6-bit operation code from an instruction.
@@ -354,4 +356,9 @@ ALWAYS_INLINE NODISCARD u32 cpu_jmp_tgt_get(const u32 instr, const u32 pc)
 ALWAYS_INLINE NODISCARD u32 cpu_branch_tgt_get(const u32 instr, const u32 pc)
 {
 	return ((cpu_instr_offset_get(instr) << 2) + pc) + sizeof(u32);
+}
+
+ALWAYS_INLINE NODISCARD u32 cpu_vaddr_to_paddr(const u32 vaddr)
+{
+	return vaddr & 0x1FFFFFFF;
 }
