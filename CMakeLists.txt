@@ -121,7 +121,13 @@ set(COMPILER_FLAGS_BASE
 	-Wswitch-enum
 	-Wundef
 	-Wvla
-	-Wwrite-strings)
+	-Wwrite-strings
+	-fno-stack-protector
+	-fcf-protection=none
+	-fno-asynchronous-unwind-tables
+	-fstack-clash-protection
+	-fno-pie
+	-fno-stack-clash-protection)
 
 # These flags will apply if and only if gcc is the compiler.
 set(COMPILER_FLAGS_BASE_GCC
@@ -156,6 +162,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release|RelWithDebInfo")
 	list(APPEND COMPILER_FLAGS_BASE "-Ofast")
 endif()
+
+target_compile_definitions(psycho_build_config_base INTERFACE -D_FORTIFY_SOURCE=0)
 
 target_compile_options(
 	psycho_build_config_base INTERFACE
