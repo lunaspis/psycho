@@ -20,11 +20,127 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/// @file dbg_disasm.c Defines the implementation of the disassembler.
+///
+/// The disassembler simply takes an LR33300 instruction and converts it into
+/// the equivalent assembly language. It has the ability to output the contents
+/// of the affected register(s) pre- or post- instruction execution, assuming
+/// the instruction is the next one to execute.
+///
+/// There are no provisions at this time to support custom output formats; this
+/// would be quite slow, difficult to maintain, and non-trivial to handle.
+/// Unfortunately, a common output format does not exist among emulators.
+///
+/// Counterintuitively, the disassembler has an important role to play with
+/// respect to speed; if a full system trace is executing, we want to format
+/// instructions as fast as possible to reduce the impact these operations have
+/// on emulation itself. Indeed, we could probably get better performance with a
+/// custom sprintf() function that supports exactly the operations we need and
+/// nothing more. This does not address the performance concern of I/O
+/// contention on disk, as that would be the responsibility of the frontend.
+///
+/// Development is much too early to worry about this to such an extent.
+///
+/// Note that since this file has a "dbg_" prefixed to it, this means the
+/// functionality provided here may be compiled out entirely.
+
+#include "psycho/ctx.h"
 #include "psycho/cpu_defs.h"
 #include "psycho/dbg_disasm.h"
 #include "cpu_defs.h"
+#include <stdio.h>
+#include <string.h>
 
 // clang-format off
+#define GROUP_SPECIAL	(CPU_OP_GROUP_SPECIAL)
+#define GROUP_BCOND	(CPU_OP_GROUP_BCOND)
+#define GROUP_COP0	(CPU_OP_GROUP_COP0)
+#define GROUP_COP2	(CPU_OP_GROUP_COP2)
+
+#define ADD 	(CPU_OP_ADD)
+#define ADDI	(CPU_OP_ADDI)
+#define ADDIU	(CPU_OP_ADDIU)
+#define ADDU	(CPU_OP_ADDU)
+#define AND	(CPU_OP_AND)
+#define ANDI	(CPU_OP_ANDI)
+#define AVSZ3	(CPU_OP_AVSZ3)
+#define AVSZ4	(CPU_OP_AVSZ4)
+#define BEQ	(CPU_OP_BEQ)
+#define BGTZ	(CPU_OP_BGTZ)
+#define BLEZ	(CPU_OP_BLEZ)
+#define BNE	(CPU_OP_BNE)
+#define BREAK	(CPU_OP_BREAK)
+#define CC	(CPU_OP_CC)
+#define CDP	(CPU_OP_CDP)
+#define CF	(CPU_OP_CF)
+#define CT	(CPU_OP_CT)
+#define DCPL	(CPU_OP_DCPL)
+#define DIV	(CPU_OP_DIV)
+#define DIVU	(CPU_OP_DIVU)
+#define DPCS	(CPU_OP_DPCS)
+#define DPCT	(CPU_OP_DPCT)
+#define GPF	(CPU_OP_GPF)
+#define GPL	(CPU_OP_GPL)
+#define INTPL	(CPU_OP_INTPL)
+#define J	(CPU_OP_J)
+#define JAL	(CPU_OP_JAL)
+#define JALR	(CPU_OP_JALR)
+#define JR	(CPU_OP_JR)
+#define LB	(CPU_OP_LB)
+#define LBU	(CPU_OP_LBU)
+#define LH	(CPU_OP_LH)
+#define LHU	(CPU_OP_LHU)
+#define LUI	(CPU_OP_LUI)
+#define LW	(CPU_OP_LW)
+#define LWC2	(CPU_OP_LWC2)
+#define LWL	(CPU_OP_LWL)
+#define LWR	(CPU_OP_LWR)
+#define MF	(CPU_OP_MF)
+#define MFHI	(CPU_OP_MFHI)
+#define MFLO	(CPU_OP_MFLO)
+#define MT	(CPU_OP_MT)
+#define MTHI	(CPU_OP_MTHI)
+#define MTLO	(CPU_OP_MTLO)
+#define MULT	(CPU_OP_MULT)
+#define MULTU	(CPU_OP_MULTU)
+#define MVMVA	(CPU_OP_MVMVA)
+#define NCCS	(CPU_OP_NCCS)
+#define NCCT	(CPU_OP_NCCT)
+#define NCDS	(CPU_OP_NCDS)
+#define NCDT	(CPU_OP_NCDT)
+#define NCLIP	(CPU_OP_NCLIP)
+#define NCS	(CPU_OP_NCS)
+#define NCT	(CPU_OP_NCT)
+#define NOR	(CPU_OP_NOR)
+#define OP	(CPU_OP_OP)
+#define OR	(CPU_OP_OR)
+#define ORI	(CPU_OP_ORI)
+#define RFE	(CPU_OP_RFE)
+#define RTPS	(CPU_OP_RTPS)
+#define RTPT	(CPU_OP_RTPT)
+#define SB	(CPU_OP_SB)
+#define SH	(CPU_OP_SH)
+#define SLL	(CPU_OP_SLL)
+#define SLLV	(CPU_OP_SLLV)
+#define SLT	(CPU_OP_SLT)
+#define SLTI	(CPU_OP_SLTI)
+#define SLTIU	(CPU_OP_SLTIU)
+#define SLTU	(CPU_OP_SLTU)
+#define SQR	(CPU_OP_SQR)
+#define SRA	(CPU_OP_SRA)
+#define SRAV	(CPU_OP_SRAV)
+#define SRL	(CPU_OP_SRL)
+#define SRLV	(CPU_OP_SRLV)
+#define SUB	(CPU_OP_SUB)
+#define SUBU	(CPU_OP_SUBU)
+#define SW	(CPU_OP_SW)
+#define SWC2	(CPU_OP_SWC2)
+#define SWL	(CPU_OP_SWL)
+#define SWR	(CPU_OP_SWR)
+#define SYSCALL	(CPU_OP_SYSCALL)
+#define XOR	(CPU_OP_XOR)
+#define XORI	(CPU_OP_XORI)
+
 #define zero	(CPU_GPR_zero)
 #define at	(CPU_GPR_at)
 #define v0	(CPU_GPR_v0)
@@ -141,6 +257,27 @@
 #define ZSF4	(CPU_CP2_CCR_ZSF4)
 #define FLAG	(CPU_CP2_CCR_FLAG)
 
+#define COMMENT_GPR_RD	(0)
+#define COMMENT_GPR_RT	(1)
+#define COMMENT_LO	(2)
+#define COMMENT_HI	(3)
+
+/// @brief Resolve branch offsets to a branch target address.
+#define COMMENT_BRANCH	(4)
+
+/// @brief Resolve virtual addresses and convert them to physical addresses.
+#define COMMENT_PADDR	(5)
+
+/// @brief The number of spaces relative to the end of the disassembly result to
+/// append for comments.
+#define TRACE_NUM_SPACES (35)
+
+/// @brief The character to use to start a comment section.
+#define COMMENT_START_CHAR (';')
+
+/// @brief The character to use to delimit comments.
+#define COMMENT_DELIM (',')
+
 const char *const psycho_cpu_gpr_names[PSYCHO_CPU_GPR_REGS_NUM] = {
 	[zero] = "zero", [at] = "at", [v0] = "v0", [v1] = "v1", [a0] = "a0",
 	[a1]   = "a1",	 [a2] = "a2", [a3] = "a3", [t0] = "t0", [t1] = "t1",
@@ -197,13 +334,502 @@ const char *const psycho_cpu_cp2_ccr_names[PSYCHO_CPU_CP2_CCR_REGS_NUM] = {
 	[DQA] 	 = "C2_DQA",	[DQB] 	 = "C2_DQB",	[ZSF3] 	 = "C2_ZSF3",
 	[ZSF4] 	 = "C2_ZSF4",	[FLAG] 	 = "C2_FLAG"
 };
+
+#define gpr	(psycho_cpu_gpr_names)
+#define cp0_cpr	(psycho_cpu_cp0_cpr_names)
+#define cp2_cpr	(psycho_cpu_cp2_cpr_names)
+#define cp2_ccr	(psycho_cpu_cp2_ccr_names)
 // clang-format on
+
+static ALWAYS_INLINE void res_set(struct psycho_ctx *const ctx,
+				  const char *const str, const size_t len)
+{
+	memcpy(ctx->disasm.result, str, len);
+	ctx->disasm.len = (int)len - 1;
+}
 
 void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 		       const u32 pc)
 {
+#define FORMAT(args...) (ctx->disasm.len = sprintf(ctx->disasm.result, args))
+
+#define RES_SET(str) (res_set(ctx, (str), sizeof(str)))
+
+#define base (cpu_instr_base_get(instr))
+#define op (cpu_instr_op_get(instr))
+#define rd (cpu_instr_rd_get(instr))
+#define rt (cpu_instr_rt_get(instr))
+#define rs (cpu_instr_rs_get(instr))
+#define offset ((s16)cpu_instr_offset_get(instr))
+#define shamt (cpu_instr_shamt_get(instr))
+#define funct (cpu_instr_funct_get(instr))
+#define target (cpu_instr_target_get(instr))
+#define ZEXT_IMM (cpu_instr_zext_imm_get(instr))
+#define SEXT_IMM (offset)
+
+#define COMMENT_ADD(comment) \
+	(ctx->disasm.comments[ctx->disasm.num_comments++] = comment)
+
+#define FORMAT_SHIFT_VAR(op_name)                                     \
+	({                                                            \
+		FORMAT(op_name " %s,%s,%u", gpr[rd], gpr[rt], shamt); \
+		COMMENT_ADD(COMMENT_GPR_RD);                          \
+	})
+
+#define FORMAT_SHIFT_REG(op_name)                                       \
+	({                                                              \
+		FORMAT(op_name " %s,%s,%s", gpr[rd], gpr[rt], gpr[rs]); \
+		COMMENT_ADD(COMMENT_GPR_RD);                            \
+	})
+
+#define FORMAT_MULT_DIV(op_name)                            \
+	({                                                  \
+		FORMAT(op_name " %s,%s", gpr[rs], gpr[rt]); \
+		COMMENT_ADD(COMMENT_LO);                    \
+		COMMENT_ADD(COMMENT_HI);                    \
+	})
+
+#define FORMAT_ARITH_REG(op_name)                                       \
+	({                                                              \
+		FORMAT(op_name " %s,%s,%s", gpr[rd], gpr[rs], gpr[rt]); \
+		COMMENT_ADD(COMMENT_GPR_RD);                            \
+	})
+
+#define FORMAT_BRANCH_REG(op_name)                                   \
+	({                                                           \
+		FORMAT(op_name " %s,%s,%s0x%04hX", gpr[rs], gpr[rt], \
+		       (offset < 0) ? "-" : "", offset);             \
+		COMMENT_ADD(COMMENT_BRANCH);                         \
+	})
+
+#define FORMAT_BRANCH(op_name)                           \
+	({                                               \
+		FORMAT(op_name " %s,%s0x%04hX", gpr[rs], \
+		       (offset < 0) ? "-" : "", offset); \
+		COMMENT_ADD(COMMENT_BRANCH);             \
+	})
+
+#define FORMAT_LOAD_STORE(op_name)                                            \
+	FORMAT(op_name " %s,%s0x%04hX(%s)", gpr[rt], (offset < 0) ? "-" : "", \
+	       offset, gpr[base]);
+
+#define FORMAT_LOAD(op_name)                 \
+	({                                   \
+		FORMAT_LOAD_STORE(op_name);  \
+		COMMENT_ADD(COMMENT_GPR_RT); \
+		COMMENT_ADD(COMMENT_PADDR);  \
+	})
+
+#define FORMAT_STORE(op_name)               \
+	({                                  \
+		FORMAT_LOAD_STORE(op_name); \
+		COMMENT_ADD(COMMENT_PADDR); \
+	})
+
+#define FORMAT_ARITH_ZEXT_IMM(op_name) \
+	(FORMAT(op_name " %s,%s,0x%04X", gpr[rt], gpr[rs], ZEXT_IMM))
+
+#define FORMAT_ARITH_SEXT_IMM(op_name)                        \
+	(FORMAT(op_name " %s,%s,%s0x%04hX", gpr[rt], gpr[rs], \
+		(SEXT_IMM < 0) ? "-" : "", SEXT_IMM))
+
+#define ILLEGAL (FORMAT("illegal 0x%08X", instr))
+
+	ctx->disasm.instr = instr;
+	ctx->disasm.pc = pc;
+
+	switch (op) {
+	case GROUP_SPECIAL:
+		switch (funct) {
+		case SLL:
+			FORMAT_SHIFT_VAR("sll");
+			return;
+
+		case SRL:
+			FORMAT_SHIFT_VAR("srl");
+			return;
+
+		case SRA:
+			FORMAT_SHIFT_VAR("sra");
+			return;
+
+		case SLLV:
+			FORMAT_SHIFT_REG("sllv");
+			return;
+
+		case SRLV:
+			FORMAT_SHIFT_REG("srlv");
+			return;
+
+		case SRAV:
+			FORMAT_SHIFT_REG("srav");
+			return;
+
+		case JR:
+			FORMAT("jr %s", gpr[rs]);
+			return;
+
+		case JALR:
+			FORMAT("jalr %s,%s", gpr[rd], gpr[rs]);
+			return;
+
+		case SYSCALL:
+			RES_SET("syscall");
+			return;
+
+		case BREAK:
+			RES_SET("break");
+			return;
+
+		case MFHI:
+			FORMAT("mfhi %s", gpr[rd]);
+			return;
+
+		case MTHI:
+			FORMAT("mthi %s", gpr[rs]);
+			return;
+
+		case MFLO:
+			FORMAT("mflo %s", gpr[rd]);
+			return;
+
+		case MTLO:
+			FORMAT("mtlo %s", gpr[rs]);
+			return;
+
+		case MULT:
+			FORMAT_MULT_DIV("mult");
+			return;
+
+		case MULTU:
+			FORMAT_MULT_DIV("multu");
+			return;
+
+		case DIV:
+			FORMAT_MULT_DIV("div");
+			return;
+
+		case DIVU:
+			FORMAT_MULT_DIV("divu");
+			return;
+
+		case ADD:
+			FORMAT_ARITH_REG("add");
+			return;
+
+		case ADDU:
+			FORMAT_ARITH_REG("addu");
+			return;
+
+		case SUB:
+			FORMAT_ARITH_REG("sub");
+			return;
+
+		case SUBU:
+			FORMAT_ARITH_REG("subu");
+			return;
+
+		case AND:
+			FORMAT_ARITH_REG("and");
+			return;
+
+		case OR:
+			FORMAT_ARITH_REG("or");
+			return;
+
+		case XOR:
+			FORMAT_ARITH_REG("xor");
+			return;
+
+		case NOR:
+			FORMAT_ARITH_REG("nor");
+			return;
+
+		case SLT:
+			FORMAT_ARITH_REG("slt");
+			return;
+
+		case SLTU:
+			FORMAT_ARITH_REG("sltu");
+			return;
+
+		default:
+			ILLEGAL;
+			return;
+		}
+
+	case GROUP_BCOND: {
+		const char *const opcode = (rt & 1) ? "bgez" : "bltz";
+		const char *const link = ((rt >> 4) & 1) ? "al" : "";
+
+		FORMAT("%s%s %s, %s0x%04hX", opcode, link, gpr[rs],
+		       (offset < 0) ? "-" : "", offset);
+		return;
+	}
+
+	case J:
+		FORMAT("j 0x%08X", target);
+		return;
+
+	case JAL:
+		FORMAT("jal 0x%08X", target);
+		return;
+
+	case BEQ:
+		FORMAT_BRANCH_REG("beq");
+		return;
+
+	case BNE:
+		FORMAT_BRANCH_REG("bne");
+		return;
+
+	case BLEZ:
+		FORMAT_BRANCH("blez");
+		return;
+
+	case BGTZ:
+		FORMAT_BRANCH("bgtz");
+		return;
+
+	case ADDI:
+		FORMAT_ARITH_SEXT_IMM("addi");
+		return;
+
+	case ADDIU:
+		FORMAT_ARITH_SEXT_IMM("addiu");
+		return;
+
+	case SLTI:
+		FORMAT_ARITH_SEXT_IMM("slti");
+		return;
+
+	case SLTIU:
+		FORMAT_ARITH_SEXT_IMM("sltiu");
+		return;
+
+	case ANDI:
+		FORMAT_ARITH_ZEXT_IMM("andi");
+		return;
+
+	case ORI:
+		FORMAT_ARITH_ZEXT_IMM("ori");
+		return;
+
+	case XORI:
+		FORMAT_ARITH_ZEXT_IMM("xori");
+		return;
+
+	case LUI:
+		FORMAT("lui %s,0x%04X", gpr[rt], ZEXT_IMM);
+		return;
+
+	case GROUP_COP0:
+		switch (rs) {
+		case MF:
+			FORMAT("mfc0 %s,%s", gpr[rt], cp0_cpr[rd]);
+			return;
+
+		case MT:
+			FORMAT("mtc0 %s,%s", gpr[rt], cp0_cpr[rd]);
+			return;
+
+		default:
+			switch (funct) {
+			case RFE:
+				RES_SET("rfe");
+				return;
+
+			default:
+				ILLEGAL;
+				return;
+			}
+		}
+
+	case GROUP_COP2:
+		switch (rs) {
+		case MF:
+			FORMAT("mfc2 %s,%s", gpr[rt], cp2_cpr[rd]);
+			return;
+
+		case CF:
+			FORMAT("cfc2 %s,%s", gpr[rt], cp2_ccr[rd]);
+			return;
+
+		case MT:
+			FORMAT("mtc2 %s,%s", gpr[rt], cp2_cpr[rd]);
+			return;
+
+		case CT:
+			FORMAT("ctc2 %s,%s", gpr[rd], cp2_ccr[rd]);
+			return;
+
+		default:
+			switch (funct) {
+			case RTPS:
+				RES_SET("rtps");
+				return;
+
+			case NCLIP:
+				RES_SET("nclip");
+				return;
+
+			case OP:
+				RES_SET("op");
+				return;
+
+			case DPCS:
+				RES_SET("dpcs");
+				return;
+
+			case INTPL:
+				RES_SET("intpl");
+				return;
+
+			case MVMVA:
+				RES_SET("mvmva");
+				return;
+
+			case NCDS:
+				RES_SET("ncds");
+				return;
+
+			case CDP:
+				RES_SET("cdp");
+				return;
+
+			case NCDT:
+				RES_SET("ncdt");
+				return;
+
+			case NCCS:
+				RES_SET("nccs");
+				return;
+
+			case CC:
+				RES_SET("cc");
+				return;
+
+			case NCS:
+				RES_SET("ncs");
+				return;
+
+			case NCT:
+				RES_SET("nct");
+				return;
+
+			case SQR:
+				RES_SET("sqr");
+				return;
+
+			case DCPL:
+				RES_SET("dcpl");
+				return;
+
+			case DPCT:
+				RES_SET("dpct");
+				return;
+
+			case AVSZ3:
+				RES_SET("avsz3");
+				return;
+
+			case AVSZ4:
+				RES_SET("avsz4");
+				return;
+
+			case RTPT:
+				RES_SET("rtpt");
+				return;
+
+			case GPF:
+				RES_SET("gpf");
+				return;
+
+			case GPL:
+				RES_SET("gpl");
+				return;
+
+			case NCCT:
+				RES_SET("ncct");
+				return;
+
+			default:
+				ILLEGAL;
+				return;
+			}
+		}
+
+	case LB:
+		FORMAT_LOAD("lb");
+		return;
+
+	case LH:
+		FORMAT_LOAD("lh");
+		return;
+
+	case LWL:
+		FORMAT_LOAD("lwl");
+		return;
+
+	case LW:
+		FORMAT_LOAD("lw");
+		return;
+
+	case LBU:
+		FORMAT_LOAD("lbu");
+		return;
+
+	case LHU:
+		FORMAT_LOAD("lhu");
+		return;
+
+	case LWR:
+		FORMAT_LOAD("lwr");
+		return;
+
+	case SB:
+		FORMAT_STORE("sb");
+		return;
+
+	case SH:
+		FORMAT_STORE("sh");
+		return;
+
+	case SWL:
+		FORMAT_STORE("swl");
+		return;
+
+	case SW:
+		FORMAT_STORE("sw");
+		return;
+
+	case SWR:
+		FORMAT_STORE("swr");
+		return;
+
+	case LWC2:
+		return;
+
+	case SWC2:
+		return;
+
+	default:
+		ILLEGAL;
+		return;
+	}
+
+#undef FORMAT
+#undef FORMAT_SHIFT_VAR
+#undef FORMAT_SHIFT_REG
+#undef FORMAT_MULT_DIV
+#undef FORMAT_BRANCH
+#undef FORMAT_LOAD_STORE
+#undef FORMAT_ARITH_REG
+#undef FORMAT_ARITH_ZEXT_IMM
+#undef FORMAT_ARITH_SEXT_IMM
 }
 
 void psycho_dbg_disasm_trace(struct psycho_ctx *const ctx)
 {
+	// Unimplemented until CPU is implementation.
 }

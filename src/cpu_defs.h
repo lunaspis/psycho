@@ -54,6 +54,8 @@
 #define CPU_OP_BREAK	(0x0D)
 #define CPU_OP_CC	(0x1C)
 #define CPU_OP_CDP	(0x14)
+#define CPU_OP_CF	(0x02)
+#define CPU_OP_CT	(0x06)
 #define CPU_OP_DCPL	(0x29)
 #define CPU_OP_DIV	(0x1A)
 #define CPU_OP_DIVU	(0x1B)
@@ -75,8 +77,10 @@
 #define CPU_OP_LWC2	(0x32)
 #define CPU_OP_LWL	(0x22)
 #define CPU_OP_LWR	(0x26)
+#define CPU_OP_MF	(0x00)
 #define CPU_OP_MFHI	(0x10)
 #define CPU_OP_MFLO	(0x12)
+#define CPU_OP_MT	(0x04)
 #define CPU_OP_MTHI	(0x11)
 #define CPU_OP_MTLO	(0x13)
 #define CPU_OP_MULT	(0x18)
@@ -340,4 +344,14 @@ ALWAYS_INLINE NODISCARD u32 cpu_instr_base_get(const u32 instr)
 ALWAYS_INLINE NODISCARD u32 cpu_instr_offset_get(const u32 instr)
 {
 	return cpu_instr_sext_imm_get(instr);
+}
+
+ALWAYS_INLINE NODISCARD u32 cpu_jmp_tgt_get(const u32 instr, const u32 pc)
+{
+	return (cpu_instr_target_get(instr) << 2) | (pc & 0xF0000000);
+}
+
+ALWAYS_INLINE NODISCARD u32 cpu_branch_tgt_get(const u32 instr, const u32 pc)
+{
+	return ((cpu_instr_offset_get(instr) << 2) + pc) + sizeof(u32);
 }
