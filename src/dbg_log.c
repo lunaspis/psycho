@@ -29,30 +29,29 @@
 #include "dbg_log.h"
 
 FORMAT_CHK(3, 4)
-void dbg_log_msg(const struct psycho_dbg_log *const log, const uint level,
+void dbg_log_msg(const struct psycho_dbg_log *const log, const uint lvl,
 		 const char *const msg, ...)
 {
 	// clang-format off
-	static const char *const level_txt[] = {
-		[PSYCHO_DBG_LOG_LEVEL_INFO]  = "[info]",
-		[PSYCHO_DBG_LOG_LEVEL_WARN]  = "[warn]",
-		[PSYCHO_DBG_LOG_LEVEL_ERR]   = "[error]",
-		[PSYCHO_DBG_LOG_LEVEL_DBG]   = "[debug]",
-		[PSYCHO_DBG_LOG_LEVEL_TRACE] = "[trace]"
+	static const struct {
+		const char *const str;
+		size_t len;
+	} lvl_data[] = {
+		[PSYCHO_DBG_LOG_LEVEL_INFO]  = {"[info] ", sizeof("[info] ")},
+		[PSYCHO_DBG_LOG_LEVEL_WARN]  = {"[warn] ", sizeof("[warn] ")},
+		[PSYCHO_DBG_LOG_LEVEL_ERR]   = {"[error] ", sizeof("[error] ")},
+		[PSYCHO_DBG_LOG_LEVEL_DBG]   = {"[debug] ", sizeof("[debug] ")},
+		[PSYCHO_DBG_LOG_LEVEL_TRACE] = {"[trace] ", sizeof("[trace] ")}
 	};
 	// clang-format on
 
 	char str[LOG_MSG_MAX];
-	uint pos = 0;
-
-	memcpy(str, level_txt[level], sizeof(*level_txt[level]));
-	pos += sizeof(level_txt[level]);
-	str[pos++] = ' ';
+	memcpy(str, lvl_data[lvl].str, lvl_data[lvl].len);
 
 	va_list args;
 	va_start(args, msg);
-	vsprintf(str, msg, args);
+	vsprintf(&str[lvl_data[lvl].len - 1], msg, args);
 	va_end(args);
 
-	log->cb(log->udata, level, str);
+	log->cb(log->udata, lvl, str);
 }

@@ -335,10 +335,10 @@ const char *const psycho_cpu_cp2_ccr_names[PSYCHO_CPU_CP2_CCR_REGS_NUM] = {
 	[ZSF4] 	 = "C2_ZSF4",	[FLAG] 	 = "C2_FLAG"
 };
 
-#define gpr	(psycho_cpu_gpr_names)
-#define cp0_cpr	(psycho_cpu_cp0_cpr_names)
-#define cp2_cpr	(psycho_cpu_cp2_cpr_names)
-#define cp2_ccr	(psycho_cpu_cp2_ccr_names)
+#define GPR	(psycho_cpu_gpr_names)
+#define CP0_CPR	(psycho_cpu_cp0_cpr_names)
+#define CP2_CPR	(psycho_cpu_cp2_cpr_names)
+#define CP2_CCR	(psycho_cpu_cp2_ccr_names)
 // clang-format on
 
 static ALWAYS_INLINE void res_set(struct psycho_ctx *const ctx,
@@ -348,8 +348,28 @@ static ALWAYS_INLINE void res_set(struct psycho_ctx *const ctx,
 	ctx->disasm.len = (int)len - 1;
 }
 
-void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
-		       const u32 pc)
+static void output_comment(struct psycho_ctx *const ctx, const uint comment)
+{
+#define FORMAT(args...) \
+	ctx->disasm.len += sprintf(&ctx->disasm.result[ctx->disasm.len], args)
+
+#define rt (cpu_instr_rt_get(ctx->disasm.instr))
+
+	switch (comment) {
+	case COMMENT_GPR_RT:
+		FORMAT("%s=0x%08X", GPR[rt], ctx->cpu.gpr[rt]);
+		break;
+
+	default:
+		break;
+	}
+
+#undef FORMAT
+#undef rt
+}
+
+void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
+			     const u32 pc)
 {
 #define FORMAT(args...) (ctx->disasm.len = sprintf(ctx->disasm.result, args))
 
@@ -372,46 +392,46 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 
 #define FORMAT_SHIFT_VAR(op_name)                                     \
 	({                                                            \
-		FORMAT(op_name " %s,%s,%u", gpr[rd], gpr[rt], shamt); \
+		FORMAT(op_name " %s,%s,%u", GPR[rd], GPR[rt], shamt); \
 		COMMENT_ADD(COMMENT_GPR_RD);                          \
 	})
 
 #define FORMAT_SHIFT_REG(op_name)                                       \
 	({                                                              \
-		FORMAT(op_name " %s,%s,%s", gpr[rd], gpr[rt], gpr[rs]); \
+		FORMAT(op_name " %s,%s,%s", GPR[rd], GPR[rt], GPR[rs]); \
 		COMMENT_ADD(COMMENT_GPR_RD);                            \
 	})
 
 #define FORMAT_MULT_DIV(op_name)                            \
 	({                                                  \
-		FORMAT(op_name " %s,%s", gpr[rs], gpr[rt]); \
+		FORMAT(op_name " %s,%s", GPR[rs], GPR[rt]); \
 		COMMENT_ADD(COMMENT_LO);                    \
 		COMMENT_ADD(COMMENT_HI);                    \
 	})
 
 #define FORMAT_ARITH_REG(op_name)                                       \
 	({                                                              \
-		FORMAT(op_name " %s,%s,%s", gpr[rd], gpr[rs], gpr[rt]); \
+		FORMAT(op_name " %s,%s,%s", GPR[rd], GPR[rs], GPR[rt]); \
 		COMMENT_ADD(COMMENT_GPR_RD);                            \
 	})
 
 #define FORMAT_BRANCH_REG(op_name)                                   \
 	({                                                           \
-		FORMAT(op_name " %s,%s,%s0x%04hX", gpr[rs], gpr[rt], \
+		FORMAT(op_name " %s,%s,%s0x%04hX", GPR[rs], GPR[rt], \
 		       (offset < 0) ? "-" : "", offset);             \
 		COMMENT_ADD(COMMENT_BRANCH);                         \
 	})
 
 #define FORMAT_BRANCH(op_name)                           \
 	({                                               \
-		FORMAT(op_name " %s,%s0x%04hX", gpr[rs], \
+		FORMAT(op_name " %s,%s0x%04hX", GPR[rs], \
 		       (offset < 0) ? "-" : "", offset); \
 		COMMENT_ADD(COMMENT_BRANCH);             \
 	})
 
 #define FORMAT_LOAD_STORE(op_name)                                            \
-	FORMAT(op_name " %s,%s0x%04hX(%s)", gpr[rt], (offset < 0) ? "-" : "", \
-	       offset, gpr[base]);
+	FORMAT(op_name " %s,%s0x%04hX(%s)", GPR[rt], (offset < 0) ? "-" : "", \
+	       offset, GPR[base]);
 
 #define FORMAT_LOAD(op_name)                 \
 	({                                   \
@@ -426,17 +446,21 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 		COMMENT_ADD(COMMENT_PADDR); \
 	})
 
-#define FORMAT_ARITH_ZEXT_IMM(op_name) \
-	(FORMAT(op_name " %s,%s,0x%04X", gpr[rt], gpr[rs], ZEXT_IMM))
+#define FORMAT_ARITH_ZEXT_IMM(op_name)                                       \
+	({                                                                   \
+		FORMAT(op_name " %s,%s,0x%04X", GPR[rt], GPR[rs], ZEXT_IMM); \
+		COMMENT_ADD(COMMENT_GPR_RT);                                 \
+	})
 
 #define FORMAT_ARITH_SEXT_IMM(op_name)                        \
-	(FORMAT(op_name " %s,%s,%s0x%04hX", gpr[rt], gpr[rs], \
+	(FORMAT(op_name " %s,%s,%s0x%04hX", GPR[rt], GPR[rs], \
 		(SEXT_IMM < 0) ? "-" : "", SEXT_IMM))
 
 #define ILLEGAL (FORMAT("illegal 0x%08X", instr))
 
 	ctx->disasm.instr = instr;
 	ctx->disasm.pc = pc;
+	ctx->disasm.num_comments = 0;
 
 	switch (op) {
 	case GROUP_SPECIAL:
@@ -466,11 +490,11 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 			return;
 
 		case JR:
-			FORMAT("jr %s", gpr[rs]);
+			FORMAT("jr %s", GPR[rs]);
 			return;
 
 		case JALR:
-			FORMAT("jalr %s,%s", gpr[rd], gpr[rs]);
+			FORMAT("jalr %s,%s", GPR[rd], GPR[rs]);
 			return;
 
 		case SYSCALL:
@@ -482,19 +506,19 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 			return;
 
 		case MFHI:
-			FORMAT("mfhi %s", gpr[rd]);
+			FORMAT("mfhi %s", GPR[rd]);
 			return;
 
 		case MTHI:
-			FORMAT("mthi %s", gpr[rs]);
+			FORMAT("mthi %s", GPR[rs]);
 			return;
 
 		case MFLO:
-			FORMAT("mflo %s", gpr[rd]);
+			FORMAT("mflo %s", GPR[rd]);
 			return;
 
 		case MTLO:
-			FORMAT("mtlo %s", gpr[rs]);
+			FORMAT("mtlo %s", GPR[rs]);
 			return;
 
 		case MULT:
@@ -562,7 +586,7 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 		const char *const opcode = (rt & 1) ? "bgez" : "bltz";
 		const char *const link = ((rt >> 4) & 1) ? "al" : "";
 
-		FORMAT("%s%s %s, %s0x%04hX", opcode, link, gpr[rs],
+		FORMAT("%s%s %s, %s0x%04hX", opcode, link, GPR[rs],
 		       (offset < 0) ? "-" : "", offset);
 		return;
 	}
@@ -620,17 +644,19 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 		return;
 
 	case LUI:
-		FORMAT("lui %s,0x%04X", gpr[rt], ZEXT_IMM);
+		FORMAT("lui %s,0x%04X", GPR[rt], ZEXT_IMM);
+		COMMENT_ADD(COMMENT_GPR_RT);
+
 		return;
 
 	case GROUP_COP0:
 		switch (rs) {
 		case MF:
-			FORMAT("mfc0 %s,%s", gpr[rt], cp0_cpr[rd]);
+			FORMAT("mfc0 %s,%s", GPR[rt], CP0_CPR[rd]);
 			return;
 
 		case MT:
-			FORMAT("mtc0 %s,%s", gpr[rt], cp0_cpr[rd]);
+			FORMAT("mtc0 %s,%s", GPR[rt], CP0_CPR[rd]);
 			return;
 
 		default:
@@ -648,19 +674,19 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 	case GROUP_COP2:
 		switch (rs) {
 		case MF:
-			FORMAT("mfc2 %s,%s", gpr[rt], cp2_cpr[rd]);
+			FORMAT("mfc2 %s,%s", GPR[rt], CP2_CPR[rd]);
 			return;
 
 		case CF:
-			FORMAT("cfc2 %s,%s", gpr[rt], cp2_ccr[rd]);
+			FORMAT("cfc2 %s,%s", GPR[rt], CP2_CCR[rd]);
 			return;
 
 		case MT:
-			FORMAT("mtc2 %s,%s", gpr[rt], cp2_cpr[rd]);
+			FORMAT("mtc2 %s,%s", GPR[rt], CP2_CPR[rd]);
 			return;
 
 		case CT:
-			FORMAT("ctc2 %s,%s", gpr[rd], cp2_ccr[rd]);
+			FORMAT("ctc2 %s,%s", GPR[rd], CP2_CCR[rd]);
 			return;
 
 		default:
@@ -818,6 +844,7 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 		return;
 	}
 
+#undef rt
 #undef FORMAT
 #undef FORMAT_SHIFT_VAR
 #undef FORMAT_SHIFT_REG
@@ -831,5 +858,29 @@ void psycho_dbg_disasm(struct psycho_ctx *const ctx, const u32 instr,
 
 void psycho_dbg_disasm_trace(struct psycho_ctx *const ctx)
 {
-	// Unimplemented until CPU is implementation.
+#define OUTPUT_DELIM        \
+	(ctx->disasm.len += \
+	 sprintf(&ctx->disasm.result[ctx->disasm.len], "%c ", COMMENT_DELIM))
+
+	if (!ctx->disasm.num_comments) {
+		return;
+	}
+
+	const int num_spaces = TRACE_NUM_SPACES - ctx->disasm.len;
+
+	memset(&ctx->disasm.result[ctx->disasm.len], ' ', (ulong)num_spaces);
+	ctx->disasm.len += num_spaces;
+
+	ctx->disasm.result[ctx->disasm.len++] = COMMENT_START_CHAR;
+	ctx->disasm.result[ctx->disasm.len++] = ' ';
+
+	output_comment(ctx, ctx->disasm.comments[0]);
+	ctx->disasm.num_comments--;
+
+	if (ctx->disasm.num_comments >= 1) {
+		for (uint i = 1; i <= ctx->disasm.num_comments; ++i) {
+			OUTPUT_DELIM;
+			output_comment(ctx, ctx->disasm.comments[i]);
+		}
+	}
 }

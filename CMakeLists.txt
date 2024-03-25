@@ -148,13 +148,21 @@ set(COMPILER_FLAGS_BASE_GCC
 
 if (PSYCHO_ENABLE_SANITIZERS)
 	list(APPEND COMPILER_FLAGS_BASE -fsanitize=address,undefined)
+
+	target_link_options(
+		psycho_build_config_base INTERFACE
+		-fsanitize=address,undefined
+	)
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 	list(APPEND COMPILER_FLAGS_BASE "-ggdb3")
 	list(APPEND COMPILER_FLAGS_BASE ${COMPILER_FLAGS_BASE_GCC})
+
+	target_link_options(psycho_build_config_base INTERFACE -no-pie)
 elseif (CMAKE_C_COMPILER_ID MATCHES "Clang")
 	list(APPEND COMPILER_FLAGS_BASE "-glldb")
+	target_link_options(psycho_build_config_base INTERFACE -no-pie)
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -181,3 +189,4 @@ endif()
 target_link_libraries(psycho_build_config_c INTERFACE psycho_build_config_base)
 
 add_subdirectory(src)
+add_subdirectory(debugger)

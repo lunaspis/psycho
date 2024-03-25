@@ -362,3 +362,5 @@ ALWAYS_INLINE NODISCARD u32 cpu_vaddr_to_paddr(const u32 vaddr)
 {
 	return vaddr & 0x1FFFFFFF;
 }
+
+extern const char *const exc_code_names[];

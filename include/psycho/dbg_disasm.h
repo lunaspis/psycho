@@ -68,7 +68,7 @@ struct psycho_dbg_disasm {
 ///
 /// @note Presumably, you would be calling this function with the current
 /// instruction and program counter.
-void psycho_dbg_disasm(struct psycho_ctx *ctx, u32 instr, u32 pc);
+void psycho_dbg_disasm_instr(struct psycho_ctx *ctx, u32 instr, u32 pc);
 
 /// @brief Executes a pre or post instruction execution trace of the last
 /// disassembled instruction.

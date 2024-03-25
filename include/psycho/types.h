@@ -32,6 +32,7 @@ extern "C" {
 #include <stdint.h>
 
 typedef unsigned int uint;
+typedef unsigned long ulong;
 typedef uint64_t u64;
 typedef int64_t s64;
 typedef uint32_t u32;

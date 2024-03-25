@@ -21,7 +21,9 @@
 // SOFTWARE.
 
 #include <string.h>
+
 #include "cpu.h"
+#include "dbg_log.h"
 
 #include "psycho/ctx.h"
 
@@ -36,6 +38,7 @@ struct psycho_ctx psycho_ctx_create(void)
 void psycho_ctx_reset(struct psycho_ctx *const ctx)
 {
 	cpu_reset(ctx);
+	LOG_INFO("System reset!");
 }
 
 void psycho_ctx_step(struct psycho_ctx *const ctx)

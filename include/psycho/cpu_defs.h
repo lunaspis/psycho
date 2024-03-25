@@ -27,7 +27,9 @@
 #define PSYCHO_CPU_CP2_CPR_REGS_NUM	(32)
 #define PSYCHO_CPU_CP2_CCR_REGS_NUM	(32)
 
-extern const char *const psycho_gpr_names[PSYCHO_CPU_GPR_REGS_NUM];
+#define PSYCHO_CPU_EXC_CODE_RI		(0xA)
+
+extern const char *const psycho_cpu_gpr_names[PSYCHO_CPU_GPR_REGS_NUM];
 extern const char *const psycho_cpu_cp0_cpr_names[PSYCHO_CPU_CP0_CPR_REGS_NUM];
 extern const char *const psycho_cpu_cp2_cpr_names[PSYCHO_CPU_CP2_CPR_REGS_NUM];
 extern const char *const psycho_cpu_cp2_ccr_names[PSYCHO_CPU_CP2_CCR_REGS_NUM];
