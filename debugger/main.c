@@ -113,6 +113,9 @@ static void bios_file_open(struct psycho_ctx *const ctx, const char *const file)
 
 int main(int argc, char **argv)
 {
+	static u8 ram[PSYCHO_BUS_RAM_SIZE];
+	memset(ram, 0, sizeof(ram));
+
 	if (argc < 2) {
 		fprintf(stderr, "%s: Missing required argument.\n", argv[0]);
 		fprintf(stderr, "Syntax: %s [bios_file]\n", argv[0]);
@@ -120,7 +123,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	struct psycho_ctx ctx = psycho_ctx_create();
+	struct psycho_ctx ctx = psycho_ctx_create(ram);
 
 	ctx_config(&ctx);
 	bios_file_open(&ctx, argv[1]);
@@ -130,6 +133,10 @@ int main(int argc, char **argv)
 		psycho_dbg_disasm_instr(&ctx, ctx.cpu.instr, ctx.cpu.pc);
 		psycho_ctx_step(&ctx);
 		psycho_dbg_disasm_trace(&ctx);
+
+		if (ctx.cpu.pc == 0x80030000) {
+			abort();
+		}
 
 		printf("0x%08X\t 0x%08X\t %s\n", ctx.disasm.pc, ctx.disasm.instr,
 		       ctx.disasm.result);

@@ -241,6 +241,9 @@
 
 #define CPU_VEC_RST		(0xBFC00000)
 
+#define CPU_CP0_CPR_REG_SR	(12)
+#define CPU_CP0_CPR_REG_SR_IsC	(1 << 16)
+
 // clang-format on
 
 /// @brief Retrieves the 6-bit operation code from an instruction.

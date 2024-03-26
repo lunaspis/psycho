@@ -265,8 +265,13 @@
 /// @brief Resolve branch offsets to a branch target address.
 #define COMMENT_BRANCH	(4)
 
+/// @brief Resolve jump offsets to a jump target address.
+#define COMMENT_JUMP	(5)
+
 /// @brief Resolve virtual addresses and convert them to physical addresses.
-#define COMMENT_PADDR	(5)
+#define COMMENT_PADDR	(6)
+
+#define COMMENT_CP0_CPR_RD	(7)
 
 /// @brief The number of spaces relative to the end of the disassembly result to
 /// append for comments.
@@ -354,10 +359,53 @@ static void output_comment(struct psycho_ctx *const ctx, const uint comment)
 	ctx->disasm.len += sprintf(&ctx->disasm.result[ctx->disasm.len], args)
 
 #define rt (cpu_instr_rt_get(ctx->disasm.instr))
+#define rd (cpu_instr_rd_get(ctx->disasm.instr))
+#define base (cpu_instr_base_get(ctx->disasm.instr))
+#define offset (cpu_instr_offset_get(ctx->disasm.instr))
 
 	switch (comment) {
 	case COMMENT_GPR_RT:
 		FORMAT("%s=0x%08X", GPR[rt], ctx->cpu.gpr[rt]);
+		break;
+
+	case COMMENT_GPR_RD:
+		FORMAT("%s=0x%08X", GPR[rd], ctx->cpu.gpr[rd]);
+		break;
+
+	case COMMENT_PADDR: {
+		const u32 vaddr = ctx->cpu.gpr[base] + offset;
+		const u32 paddr = cpu_vaddr_to_paddr(vaddr);
+
+		FORMAT("paddr=0x%08X", paddr);
+		break;
+	}
+
+	case COMMENT_JUMP: {
+		const u32 addr =
+			cpu_jmp_tgt_get(ctx->disasm.instr, ctx->disasm.pc);
+
+		FORMAT("addr=0x%08X", addr);
+		break;
+	}
+
+	case COMMENT_CP0_CPR_RD:
+		FORMAT("%s=0x%08X", CP0_CPR[rd], ctx->cpu.cp0_cpr[rd]);
+		break;
+
+	case COMMENT_BRANCH: {
+		const u32 addr =
+			cpu_branch_tgt_get(ctx->disasm.instr, ctx->disasm.pc);
+		FORMAT("addr=0x%08X", addr);
+
+		break;
+	}
+
+	case COMMENT_LO:
+		FORMAT("LO=0x%08X", ctx->cpu.lo);
+		break;
+
+	case COMMENT_HI:
+		FORMAT("HI=0x%08X", ctx->cpu.hi);
 		break;
 
 	default:
@@ -366,6 +414,9 @@ static void output_comment(struct psycho_ctx *const ctx, const uint comment)
 
 #undef FORMAT
 #undef rt
+#undef rd
+#undef base
+#undef offset
 }
 
 void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
@@ -452,15 +503,20 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 		COMMENT_ADD(COMMENT_GPR_RT);                                 \
 	})
 
-#define FORMAT_ARITH_SEXT_IMM(op_name)                        \
-	(FORMAT(op_name " %s,%s,%s0x%04hX", GPR[rt], GPR[rs], \
-		(SEXT_IMM < 0) ? "-" : "", SEXT_IMM))
+#define FORMAT_ARITH_SEXT_IMM(op_name)                               \
+	({                                                           \
+		FORMAT(op_name " %s,%s,%s0x%04hX", GPR[rt], GPR[rs], \
+		       (SEXT_IMM < 0) ? "-" : "", SEXT_IMM);         \
+		COMMENT_ADD(COMMENT_GPR_RT);                         \
+	})
 
 #define ILLEGAL (FORMAT("illegal 0x%08X", instr))
 
 	ctx->disasm.instr = instr;
 	ctx->disasm.pc = pc;
+
 	ctx->disasm.num_comments = 0;
+	ctx->disasm.len = 0;
 
 	switch (op) {
 	case GROUP_SPECIAL:
@@ -495,6 +551,8 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 
 		case JALR:
 			FORMAT("jalr %s,%s", GPR[rd], GPR[rs]);
+			COMMENT_ADD(COMMENT_GPR_RD);
+
 			return;
 
 		case SYSCALL:
@@ -507,6 +565,8 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 
 		case MFHI:
 			FORMAT("mfhi %s", GPR[rd]);
+			COMMENT_ADD(COMMENT_GPR_RD);
+
 			return;
 
 		case MTHI:
@@ -515,6 +575,8 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 
 		case MFLO:
 			FORMAT("mflo %s", GPR[rd]);
+			COMMENT_ADD(COMMENT_GPR_RD);
+
 			return;
 
 		case MTLO:
@@ -586,17 +648,21 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 		const char *const opcode = (rt & 1) ? "bgez" : "bltz";
 		const char *const link = ((rt >> 4) & 1) ? "al" : "";
 
-		FORMAT("%s%s %s, %s0x%04hX", opcode, link, GPR[rs],
+		FORMAT("%s%s %s,%s0x%04hX", opcode, link, GPR[rs],
 		       (offset < 0) ? "-" : "", offset);
 		return;
 	}
 
 	case J:
 		FORMAT("j 0x%08X", target);
+		COMMENT_ADD(COMMENT_JUMP);
+
 		return;
 
 	case JAL:
 		FORMAT("jal 0x%08X", target);
+		COMMENT_ADD(COMMENT_JUMP);
+
 		return;
 
 	case BEQ:
@@ -657,6 +723,8 @@ void psycho_dbg_disasm_instr(struct psycho_ctx *const ctx, const u32 instr,
 
 		case MT:
 			FORMAT("mtc0 %s,%s", GPR[rt], CP0_CPR[rd]);
+			COMMENT_ADD(COMMENT_CP0_CPR_RD);
+
 			return;
 
 		default:
@@ -877,7 +945,7 @@ void psycho_dbg_disasm_trace(struct psycho_ctx *const ctx)
 	output_comment(ctx, ctx->disasm.comments[0]);
 	ctx->disasm.num_comments--;
 
-	if (ctx->disasm.num_comments >= 1) {
+	if (ctx->disasm.num_comments) {
 		for (uint i = 1; i <= ctx->disasm.num_comments; ++i) {
 			OUTPUT_DELIM;
 			output_comment(ctx, ctx->disasm.comments[i]);

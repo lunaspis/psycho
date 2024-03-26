@@ -29,8 +29,14 @@
 
 struct psycho_cpu {
 	u32 gpr[PSYCHO_CPU_GPR_REGS_NUM];
+	u32 cp0_cpr[PSYCHO_CPU_CP0_CPR_REGS_NUM];
+
 	u32 instr;
 	u32 pc;
+	u32 npc;
+
+	u32 hi;
+	u32 lo;
 
 	u16 exc_halt;
 };

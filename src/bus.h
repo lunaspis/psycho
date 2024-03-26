@@ -24,4 +24,9 @@
 
 #include "psycho/ctx.h"
 
-u32 bus_lw(struct psycho_ctx *ctx, u32 paddr);
+u32 bus_lw(const struct psycho_ctx *ctx, u32 paddr);
+u8 bus_lb(const struct psycho_ctx *ctx, u32 paddr);
+
+void bus_sw(struct psycho_ctx *ctx, u32 paddr, u32 word);
+void bus_sh(struct psycho_ctx *ctx, u32 paddr, u16 hword);
+void bus_sb(struct psycho_ctx *ctx, u32 paddr, u8 byte);

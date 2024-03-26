@@ -26,6 +26,10 @@
 
 // clang-format off
 
+#define PSYCHO_BUS_RAM_BEG	(0x00000000)
+#define PSYCHO_BUS_RAM_END	(0x00200000)
+#define PSYCHO_BUS_RAM_SIZE	((PSYCHO_BUS_RAM_END - PSYCHO_BUS_RAM_BEG) - 1)
+
 #define PSYCHO_BUS_BIOS_BEG	(0x1FC00000)
 #define PSYCHO_BUS_BIOS_END	(0x1FC7FFFF)
 #define PSYCHO_BUS_BIOS_SIZE	((PSYCHO_BUS_BIOS_END - PSYCHO_BUS_BIOS_BEG) - 1)
@@ -34,4 +38,5 @@
 
 struct psycho_bus {
 	u8 bios[PSYCHO_BUS_BIOS_SIZE];
+	u8 *ram;
 };

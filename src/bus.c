@@ -26,29 +26,99 @@
 
 // clang-format off
 
+#define RAM_BEG		(PSYCHO_BUS_RAM_BEG)
+#define RAM_END		(PSYCHO_BUS_RAM_END)
+
 #define BIOS_BEG	(PSYCHO_BUS_BIOS_BEG)
 #define BIOS_END	(PSYCHO_BUS_BIOS_END)
 #define BIOS_MASK	(0x000FFFFF)
 
 // clang-format on
 
-u32 bus_lw(struct psycho_ctx *const ctx, const u32 paddr)
+u32 bus_lw(const struct psycho_ctx *const ctx, const u32 paddr)
 {
 	u32 word = 0xFFFFFFFF;
 
 	switch (paddr) {
+	case RAM_BEG ... RAM_END:
+		memcpy(&word, &ctx->bus.ram[paddr], sizeof(u32));
+		break;
+
 	case BIOS_BEG ... BIOS_END:
 		memcpy(&word, &ctx->bus.bios[paddr & BIOS_MASK], sizeof(u32));
 		break;
 
 	default:
-		LOG_TRACE("Unknown physical address 0x%08X when attempting to "
-			  "load word; returning 0xFFFF'FFFF",
-			  word, paddr);
+		LOG_WARN("Unknown physical address 0x%08X when attempting to "
+			 "load word; returning 0xFFFF'FFFF",
+			 paddr);
 		return word;
 	}
 
 	LOG_TRACE("Loaded word 0x%08X from physical address 0x%08X", word,
 		  paddr);
 	return word;
+}
+
+u8 bus_lb(const struct psycho_ctx *const ctx, const u32 paddr)
+{
+	u8 byte = 0xFF;
+
+	switch (paddr) {
+	case RAM_BEG ... RAM_END:
+		byte = ctx->bus.ram[paddr];
+		break;
+
+	case BIOS_BEG ... BIOS_END:
+		byte = ctx->bus.bios[paddr & BIOS_MASK];
+		break;
+
+	default:
+		LOG_WARN("Unknown physical address 0x%08X when attempting to "
+			 "load byte; returning 0xFF",
+			 paddr);
+		return byte;
+	}
+
+	LOG_TRACE("Loaded byte 0x%02X from 0x%08X", byte, paddr);
+	return byte;
+}
+
+void bus_sw(struct psycho_ctx *const ctx, const u32 paddr, const u32 word)
+{
+	switch (paddr) {
+	case RAM_BEG ... RAM_END:
+		memcpy(&ctx->bus.ram[paddr], &word, sizeof(u32));
+		break;
+
+	default:
+		LOG_WARN("Unknown physical address 0x%08X when attempting to "
+			 "store word 0x%08X; ignoring",
+			 paddr, word);
+		return;
+	}
+	LOG_TRACE("Stored word 0x%08X at 0x%08X", word, paddr);
+}
+
+void bus_sh(struct psycho_ctx *const ctx, const u32 paddr, const u16 hword)
+{
+	LOG_WARN("Unknown physical address 0x%08X when attempting to store "
+		 "half-word 0x%04X; ignoring",
+		 paddr, hword);
+}
+
+void bus_sb(struct psycho_ctx *const ctx, const u32 paddr, const u8 byte)
+{
+	switch (paddr) {
+	case RAM_BEG ... RAM_END:
+		ctx->bus.ram[paddr] = byte;
+		break;
+
+	default:
+		LOG_WARN("Unknown physical address 0x%08X when attempting to "
+			 "store byte 0x%02X; ignoring",
+			 paddr, byte);
+		break;
+	}
+	LOG_TRACE("Stored byte 0x%02X at 0x%08X", byte, paddr);
 }

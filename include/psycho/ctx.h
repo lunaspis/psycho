@@ -37,7 +37,7 @@ struct psycho_ctx {
 	struct psycho_dbg_log log;
 };
 
-struct psycho_ctx psycho_ctx_create(void);
+struct psycho_ctx psycho_ctx_create(u8 *ram);
 
 void psycho_ctx_reset(struct psycho_ctx *ctx);
 void psycho_ctx_step(struct psycho_ctx *ctx);

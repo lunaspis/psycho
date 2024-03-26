@@ -27,11 +27,12 @@
 
 #include "psycho/ctx.h"
 
-struct psycho_ctx psycho_ctx_create(void)
+struct psycho_ctx psycho_ctx_create(u8 *const ram)
 {
 	struct psycho_ctx ctx;
 	memset(&ctx, 0, sizeof(ctx));
 
+	ctx.bus.ram = ram;
 	return ctx;
 }
 
