@@ -20,17 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+#include <sys/stat.h>
 #include "psycho/ctx.h"
+#include "psycho/ps_x_exe.h"
 
 #define RED "\e[1;91m"
 #define YEL "\e[1;33m"
 #define MAG "\e[1;35m"
 #define WHT "\e[1;37m"
 #define RESET "\x1B[0m"
+
+static u8 exe[PSYCHO_PS_X_SIZE_MAX];
 
 static void gpr_regs_output(const struct psycho_ctx *const ctx)
 {
@@ -111,14 +115,47 @@ static void bios_file_open(struct psycho_ctx *const ctx, const char *const file)
 	fclose(fd);
 }
 
+static void exe_file_open(struct psycho_ctx *const ctx, const char *const file)
+{
+	FILE *fd = fopen(file, "rb");
+
+	if (!fd) {
+		fprintf(stderr, "Error opening EXE file %s: %s\n", file,
+			strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	struct stat st;
+	stat(file, &st);
+	const off_t exe_size = st.st_size;
+
+	const size_t bytes_read = fread(exe, 1, (ulong)exe_size, fd);
+
+	if ((ferror(fd)) || bytes_read != (size_t)exe_size) {
+		fprintf(stderr, "Error reading EXE file %s: %s\n", file,
+			strerror(errno));
+
+		fclose(fd);
+		exit(EXIT_FAILURE);
+	}
+	fclose(fd);
+
+	if (!psycho_ctx_ps_x_exe_run(ctx, exe, (size_t)exe_size)) {
+		fprintf(stderr, "The PS-X EXE specified is not valid.\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	static u8 ram[PSYCHO_BUS_RAM_SIZE];
 	memset(ram, 0, sizeof(ram));
 
-	if (argc < 2) {
+	memset(exe, 0, sizeof(exe));
+
+	if (argc < 3) {
 		fprintf(stderr, "%s: Missing required argument.\n", argv[0]);
-		fprintf(stderr, "Syntax: %s [bios_file]\n", argv[0]);
+		fprintf(stderr, "Syntax: %s [bios_file] [exe_file]\n", argv[0]);
 
 		return EXIT_FAILURE;
 	}
@@ -127,18 +164,14 @@ int main(int argc, char **argv)
 
 	ctx_config(&ctx);
 	bios_file_open(&ctx, argv[1]);
-	psycho_ctx_reset(&ctx);
+	exe_file_open(&ctx, argv[2]);
 
 	for (;;) {
-		psycho_dbg_disasm_instr(&ctx, ctx.cpu.instr, ctx.cpu.pc);
+		//psycho_dbg_disasm_instr(&ctx, ctx.cpu.instr, ctx.cpu.pc);
 		psycho_ctx_step(&ctx);
-		psycho_dbg_disasm_trace(&ctx);
+		//psycho_dbg_disasm_trace(&ctx);
 
-		if (ctx.cpu.pc == 0x80030000) {
-			abort();
-		}
-
-		printf("0x%08X\t 0x%08X\t %s\n", ctx.disasm.pc, ctx.disasm.instr,
-		       ctx.disasm.result);
+		//printf("0x%08X\t 0x%08X\t %s\n", ctx.disasm.pc,
+		//       ctx.disasm.instr, ctx.disasm.result);
 	}
 }

@@ -20,33 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-/// @file ctx.h Provides the public interface for the psycho context.
-
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 #include "bus.h"
-#include "cpu.h"
-#include "dbg_disasm.h"
-#include "dbg_log.h"
 
-/// @brief Defines the emulator context.
-struct psycho_ctx {
-	struct psycho_dbg_disasm disasm;
-	struct psycho_bus bus;
-	struct psycho_cpu cpu;
-	struct psycho_dbg_log log;
+/// @brief The size of a PS-X EXE header.
+#define PSYCHO_PS_X_EXE_HEADER_SIZE (0x800)
 
-	/// @brief The PS-X EXE which will be injected.
-	const u8 *ps_x_exe;
-};
+/// @brief The maximum possible size of a PS-X EXE (in bytes).
+#define PSYCHO_PS_X_SIZE_MAX (PSYCHO_BUS_RAM_SIZE - PSYCHO_PS_X_EXE_HEADER_SIZE)
 
-struct psycho_ctx psycho_ctx_create(u8 *ram);
-
-void psycho_ctx_reset(struct psycho_ctx *ctx);
-void psycho_ctx_step(struct psycho_ctx *ctx);
-
-bool psycho_ctx_ps_x_exe_run(struct psycho_ctx *ctx, const u8 *data,
-			     size_t len);
+#ifdef __cplusplus
+}
+#endif // __cplusplus

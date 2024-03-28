@@ -28,9 +28,10 @@ set(HDRS_PUBLIC ${PROJECT_SOURCE_DIR}/include/psycho/bus.h
 		${PROJECT_SOURCE_DIR}/include/psycho/ctx.h
 		${PROJECT_SOURCE_DIR}/include/psycho/dbg_disasm.h
 		${PROJECT_SOURCE_DIR}/include/psycho/dbg_log.h
+		${PROJECT_SOURCE_DIR}/include/psycho/ps_x_exe.h
 		${PROJECT_SOURCE_DIR}/include/psycho/types.h)
 
-set(HDRS_PRIVATE bus.h compiler.h cpu.h cpu_defs.h dbg_log.h)
+set(HDRS_PRIVATE bus.h compiler.h cpu.h cpu_defs.h dbg_log.h ps_x_exe.h)
 
 # We only support building static libraries for now.
 add_library(psycho STATIC ${SRCS} ${HDRS_PUBLIC} ${HDRS_PRIVATE})
